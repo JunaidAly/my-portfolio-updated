@@ -9,6 +9,12 @@ function Contact() {
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [notification, setNotification] = useState(null)
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type })
+    setTimeout(() => setNotification(null), 5000) // Auto-hide after 5 seconds
+  }
 
   const handleChange = (e) => {
     setFormData({
@@ -21,22 +27,83 @@ function Contact() {
     e.preventDefault()
     setIsSubmitting(true)
     
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Reset form
-    setFormData({
-      name: '',
-      email: '',
-      subject: '',
-      message: ''
-    })
-    setIsSubmitting(false)
-    alert('Message sent successfully!')
+    try {
+      const response = await fetch('/api/user/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        
+        // Reset form on success
+        setFormData({
+          name: '',
+          email: '',
+          subject: '',
+          message: ''
+        })
+        
+        showNotification('Message sent successfully! We\'ll get back to you soon.', 'success')
+      } else {
+        const error = await response.json()
+        showNotification(error.message || 'Failed to send message', 'error')
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error)
+      showNotification('Failed to send message. Please try again.', 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+      {/* Notification Toast */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-50 max-w-md w-full mx-auto transform transition-all duration-300 ease-in-out ${
+          notification ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
+        }`}>
+          <div className={`rounded-lg shadow-lg border-l-4 p-4 ${
+            notification.type === 'success' 
+              ? 'bg-gray-800 border-green-400 text-white' 
+              : 'bg-gray-800 border-red-400 text-white'
+          }`}>
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                {notification.type === 'success' ? (
+                  <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+              </div>
+              <div className="ml-3 flex-1">
+                <p className={`text-sm font-medium ${
+                  notification.type === 'success' ? 'text-green-100' : 'text-red-100'
+                }`}>
+                  {notification.message}
+                </p>
+              </div>
+              <button
+                onClick={() => setNotification(null)}
+                className="ml-4 text-gray-400 hover:text-white transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-black opacity-50"></div>
